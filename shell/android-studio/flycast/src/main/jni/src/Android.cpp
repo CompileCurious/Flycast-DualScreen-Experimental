@@ -12,6 +12,7 @@
 #include "cfg/option.h"
 #include "stdclass.h"
 #include "oslib/oslib.h"
+#include "vmu/vmu_bridge.h"  // VMU Bridge for second-screen support
 #ifdef USE_BREAKPAD
 #include "client/linux/handler/exception_handler.h"
 #endif
@@ -505,4 +506,85 @@ void dc_exit()
 		jmethodID finishAffinity = env->GetMethodID(env->GetObjectClass(g_activity), "finishAffinity", "()V");
 		jni::env()->CallVoidMethod(g_activity, finishAffinity);
 	}
+}
+
+// ============================================================
+// VMU Second-Screen Support JNI Functions
+// (Flycast DualScreen Experimental)
+// ============================================================
+
+extern "C" JNIEXPORT void JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuBridgeInit(JNIEnv *env, jobject obj)
+{
+	vmu_bridge::init();
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuBridgeTerm(JNIEnv *env, jobject obj)
+{
+	vmu_bridge::term();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuBridgeIsEnabled(JNIEnv *env, jobject obj)
+{
+	return vmu_bridge::isEnabled();
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuBridgeSetEnabled(JNIEnv *env, jobject obj, jboolean enabled)
+{
+	vmu_bridge::setEnabled(enabled);
+}
+
+extern "C" JNIEXPORT jint JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuGetConnectedCount(JNIEnv *env, jobject obj)
+{
+	return vmu_bridge::getConnectedVmuCount();
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuIsActive(JNIEnv *env, jobject obj, jint vmuId)
+{
+	return vmu_bridge::isVmuActive(vmuId);
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuIsDisplayDirty(JNIEnv *env, jobject obj, jint vmuId)
+{
+	return vmu_bridge::isVmuDisplayDirty(vmuId);
+}
+
+extern "C" JNIEXPORT jintArray JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuGetFramebuffer(JNIEnv *env, jobject obj, jint vmuId)
+{
+	const u32* framebuffer = vmu_bridge::getVmuFramebuffer(vmuId);
+	if (framebuffer == nullptr)
+		return nullptr;
+	
+	jintArray result = env->NewIntArray(vmu_bridge::VMU_LCD_PIXELS);
+	if (result == nullptr)
+		return nullptr;
+	
+	env->SetIntArrayRegion(result, 0, vmu_bridge::VMU_LCD_PIXELS, reinterpret_cast<const jint*>(framebuffer));
+	return result;
+}
+
+extern "C" JNIEXPORT jboolean JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuCopyFramebuffer(JNIEnv *env, jobject obj, jint vmuId, jintArray dest)
+{
+	if (dest == nullptr)
+		return false;
+	
+	jint length = env->GetArrayLength(dest);
+	if (length < vmu_bridge::VMU_LCD_PIXELS)
+		return false;
+	
+	const u32* framebuffer = vmu_bridge::getVmuFramebuffer(vmuId);
+	if (framebuffer == nullptr)
+		return false;
+	
+	env->SetIntArrayRegion(dest, 0, vmu_bridge::VMU_LCD_PIXELS, reinterpret_cast<const jint*>(framebuffer));
+	return true;
+}
+
+extern "C" JNIEXPORT jlong JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuGetLastUpdate(JNIEnv *env, jobject obj, jint vmuId)
+{
+	return vmu_bridge::getVmuLastUpdate(vmuId);
+}
+
+extern "C" JNIEXPORT void JNICALL Java_com_flycast_emulator_emu_JNIdc_vmuSendButton(JNIEnv *env, jobject obj, jint vmuId, jint button, jboolean pressed)
+{
+	vmu_bridge::sendVmuButtonState(vmuId, static_cast<vmu_bridge::VmuButton>(button), pressed);
 }

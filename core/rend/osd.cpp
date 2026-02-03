@@ -16,6 +16,7 @@
  */
 #include "osd.h"
 #include "stdclass.h"
+#include "vmu/vmu_bridge.h"  // VMU Bridge for second-screen support
 #ifdef LIBRETRO
 #include "vmu_xhair.h"
 #endif
@@ -43,6 +44,9 @@ void push_vmu_screen(int bus_id, int bus_port, u8* buffer)
 	vmu_lcd_status[vmu_id] = true;
 #endif
 	vmuLastChanged[vmu_id] = getTimeMs();
+	
+	// Notify VMU Bridge of the update (for second-screen support)
+	vmu_bridge::internal::onVmuDisplayUpdate(vmu_id, vmu_lcd_data[vmu_id], vmuLastChanged[vmu_id]);
 }
 
 static const int lightgunCrosshairData[16 * 16] =

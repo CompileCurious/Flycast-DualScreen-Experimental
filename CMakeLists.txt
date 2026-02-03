@@ -956,6 +956,7 @@ add_subdirectory(core/ui)
 add_subdirectory(core/lua)
 add_subdirectory(core/profiler)
 add_subdirectory(core/wsi)
+add_subdirectory(core/vmu)  # VMU Bridge for second-screen support
 
 include(cmake/resources.cmake)
 
